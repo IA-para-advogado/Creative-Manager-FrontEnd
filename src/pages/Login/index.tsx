@@ -1,15 +1,23 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Mail, Lock } from "lucide-react";
+import { Mail, Lock, LogIn } from "lucide-react";
 import { TypeAnimation } from "react-type-animation";
 import { Input } from "../../components/common/Input";
 import { loginSchema, type LoginFormData } from "../../types/LoginSchema";
+import { Spinner } from "../../components/common/Spinner";
 
 export function LoginPage() {
+    const {
+        register,
+        handleSubmit,
+        formState: { errors, isSubmitting },
+    } = useForm<LoginFormData>({ resolver: zodResolver(loginSchema) });
 
-    const {register, handleSubmit, formState: {errors, isSubmitting}} = useForm<LoginFormData>({resolver: zodResolver(loginSchema)})
+    async function handleLogin(data: LoginFormData) {
+        await new Promise((resolve) => setTimeout(resolve, 3000));
 
-    async function handleLogin(data: LoginFormData) {console.log(data)};
+        console.log(data);
+    }
 
     return (
         <div className="grid grid-col-1 md:grid-cols-2 gap-x-5 bg-background min-h-screen text-text  px-10 py-7">
@@ -30,7 +38,10 @@ export function LoginPage() {
                         </p>
                     </div>
 
-                    <form className="mt-8 space-y-6" onSubmit={handleSubmit(handleLogin)}>
+                    <form
+                        className="mt-8 space-y-6"
+                        onSubmit={handleSubmit(handleLogin)}
+                    >
                         <div className="space-y-4">
                             <Input
                                 type="email"
@@ -38,7 +49,6 @@ export function LoginPage() {
                                 label="Email"
                                 placeholder="ex: nome@gmail.com"
                                 icon={Mail}
-                                
                                 error={errors.email?.message}
                                 {...register("email")}
                             />
@@ -49,7 +59,6 @@ export function LoginPage() {
                                 label="Senha"
                                 placeholder="********"
                                 icon={Lock}
-                                
                                 error={errors.password?.message}
                                 {...register("password")}
                             />
@@ -57,20 +66,29 @@ export function LoginPage() {
 
                         <button
                             type="submit"
-                            className="cursor-pointer w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary focus:ring-offset-background transition-colors"
+                            className={`cursor-pointer w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary  outline-none transition-all duration-500 ${!isSubmitting ? "hover:scale-[1.02] hover:bg-primary-hover" : "bg-violet-900"}`}
+                            disabled={isSubmitting}
                         >
-                            {isSubmitting ? "Entrando..." : "Entrar"}
+                            {isSubmitting ? (
+                                <div className="flex gap-2 justify-center items-center">
+                                    <Spinner size={6} />
+                                    Entrando
+                                </div>
+                                
+                            ) : (
+                                <div className="flex gap-2 justify-center items-center">
+                                    <LogIn size={20} />
+                                    Fazer login{" "}
+                                </div>
+                            )}
                         </button>
                     </form>
                 </div>
             </div>
 
-            <div 
-                className="hidden md:flex flex-col w-full h-full justify-center p-12 lg:p-20 relative overflow-hidden bg-background border-l border-border rounded-2xl"
-            >
-            
+            <div className="hidden md:flex flex-col w-full h-full justify-center p-12 lg:p-20 relative overflow-hidden bg-background border-l border-border rounded-2xl">
                 {/* efeito de glow */}
-                <div className="absolute top-[-20%] right-[-10%] w-125 h-125 bg-primary opacity-20 rounded-full blur-[120px] pointer-events-none"></div>                
+                <div className="absolute top-[-20%] right-[-10%] w-125 h-125 bg-primary opacity-20 rounded-full blur-[120px] pointer-events-none"></div>
                 <div className="absolute bottom-[-20%] left-[-10%] w-100 h-100 bg-success opacity-10 rounded-full blur-[100px] pointer-events-none"></div>
 
                 <div className="z-10 w-full max-w-2xl">
