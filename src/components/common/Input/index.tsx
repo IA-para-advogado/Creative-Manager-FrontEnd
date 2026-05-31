@@ -31,6 +31,10 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
                         className={`
                             block w-full py-2 bg-background border rounded-md text-text placeholder-text-muted 
                             focus:outline-none focus:ring-1 transition-colors
+
+                            autofill:shadow-[inset_0_0_0px_1000px_var(--color-background)]
+                            autofill:[-webkit-text-fill-color:var(--color-text)]
+
                             ${Icon ? "pl-10 pr-3" : "px-3"}
                             ${
                                 error

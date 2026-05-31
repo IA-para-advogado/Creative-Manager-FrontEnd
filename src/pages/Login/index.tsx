@@ -1,8 +1,16 @@
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Mail, Lock } from "lucide-react";
 import { TypeAnimation } from "react-type-animation";
 import { Input } from "../../components/common/Input";
+import { loginSchema, type LoginFormData } from "../../types/LoginSchema";
 
 export function LoginPage() {
+
+    const {register, handleSubmit, formState: {errors, isSubmitting}} = useForm<LoginFormData>({resolver: zodResolver(loginSchema)})
+
+    async function handleLogin(data: LoginFormData) {console.log(data)};
+
     return (
         <div className="grid grid-col-1 md:grid-cols-2 gap-x-5 bg-background min-h-screen text-text  px-10 py-7">
             <div className="flex flex-col justify-center items-center p-8 sm:p-12 lg:p-22 bg-surface rounded-2xl">
@@ -22,26 +30,28 @@ export function LoginPage() {
                         </p>
                     </div>
 
-                    <form className="mt-8 space-y-6" action="">
+                    <form className="mt-8 space-y-6" onSubmit={handleSubmit(handleLogin)}>
                         <div className="space-y-4">
                             <Input
                                 type="email"
                                 id="email"
-                                name="email"
                                 label="Email"
                                 placeholder="ex: nome@gmail.com"
                                 icon={Mail}
-                                required
+                                
+                                error={errors.email?.message}
+                                {...register("email")}
                             />
 
                             <Input
                                 type="password"
                                 id="password"
-                                name="password"
                                 label="Senha"
                                 placeholder="********"
                                 icon={Lock}
-                                required
+                                
+                                error={errors.password?.message}
+                                {...register("password")}
                             />
                         </div>
 
@@ -49,7 +59,7 @@ export function LoginPage() {
                             type="submit"
                             className="cursor-pointer w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary focus:ring-offset-background transition-colors"
                         >
-                            Entrar
+                            {isSubmitting ? "Entrando..." : "Entrar"}
                         </button>
                     </form>
                 </div>
