@@ -23,9 +23,16 @@ export function LoginPage() {
         <div className="grid grid-col-1 md:grid-cols-2 gap-x-5 bg-background min-h-screen text-text  px-10 py-7">
             <div className="flex flex-col justify-center items-center p-8 sm:p-12 lg:p-22 bg-surface rounded-2xl">
                 <div className="w-full max-w-md space-y-8">
-                    <h1 className="text-5xl text-center font-extrabold text-primary">
-                        LOGO
-                    </h1>
+                    <div className="flex justify-center items-center">
+                        <div className="relative w-36 h-36">
+                            <div className="absolute inset-0 rounded-full bg-primary"></div>
+                            <div className="absolute inset-1 rounded-full bg-background flex items-center justify-center">
+                                <h1 className="text-7xl font-extrabold">
+                                    C<span className="text-primary">M</span>
+                                </h1>
+                            </div>
+                        </div>
+                    </div>
 
                     <div className="text-center">
                         <h1 className="text-3xl font-bold mb-2">
@@ -95,7 +102,7 @@ export function LoginPage() {
                         <p className="mt-6 text-center text-sm text-text-muted">
                             Ainda não tem uma conta?{" "}
                             <a
-                                href="#signup"
+                                href="/auth/register"
                                 className="font-semibold text-primary hover:text-primary-hover hover:underline transition-colors focus:outline-none rounded-sm"
                             >
                                 Cadastre-se
