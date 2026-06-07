@@ -71,10 +71,9 @@ export function LoginPage() {
                         >
                             {isSubmitting ? (
                                 <div className="flex gap-2 justify-center items-center">
-                                    <Spinner size={6} />
+                                    <Spinner />
                                     Entrando
                                 </div>
-                                
                             ) : (
                                 <div className="flex gap-2 justify-center items-center">
                                     <LogIn size={20} />
