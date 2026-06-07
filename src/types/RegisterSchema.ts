@@ -3,7 +3,13 @@ import { z } from "zod";
 export const registerSchema = z.object({
     name: z.string().min(1, "O nome é obrigatório."),
     lastName: z.string().min(1, "O sobrenome é obrigatório."),
-    phone: z.string().min(1, "O telefone é obrigatório."),
+    phone: z
+        .string()
+        .min(1, "O telefone é obrigatório.")
+        .transform((value) => value.replace(/\D/g, ""))
+        .refine((value) => value.length === 11, {
+            message: "Telefone inválido"
+        }),
     email: z
         .string()
         .min(1, "O e-mail é obrigatório.")
