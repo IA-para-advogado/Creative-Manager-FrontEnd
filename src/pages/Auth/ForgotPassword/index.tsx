@@ -6,7 +6,7 @@ import { Spinner } from "../../../components/common/Spinner";
 import {
     forgotPasswordSchema,
     type ForgotPasswordFormData,
-} from "../../../types/ForgotPasswordSchema";
+} from "../../../types/Auth/ForgotPasswordSchema";
 
 export function ForgotPasswordPage() {
     const {

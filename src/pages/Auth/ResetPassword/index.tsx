@@ -6,7 +6,7 @@ import { Spinner } from "../../../components/common/Spinner";
 import {
     resetPasswordSchema,
     type ResetPasswordFormData,
-} from "../../../types/ResetPasswordSchema";
+} from "../../../types/Auth/ResetPasswordSchema";
 
 export function ResetPasswordPage() {
     const {

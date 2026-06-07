@@ -6,7 +6,7 @@ import { Input } from "../../../components/common/Input";
 import {
     registerSchema,
     type RegisterFormData,
-} from "../../../types/RegisterSchema";
+} from "../../../types/Auth/RegisterSchema";
 import { Spinner } from "../../../components/common/Spinner";
 
 export function RegisterPage() {
@@ -91,8 +91,10 @@ export function RegisterPage() {
                             error={errors.phone?.message}
                             {...register("phone", {
                                 onChange: (e) => {
-                                    e.target.value = formatPhone(e.target.value)
-                                }
+                                    e.target.value = formatPhone(
+                                        e.target.value,
+                                    );
+                                },
                             })}
                         />
 
@@ -139,7 +141,7 @@ export function RegisterPage() {
                         </button>
 
                         <p className="mt-4 text-center text-sm text-text-muted">
-                            Já possui uma conta? {" "}
+                            Já possui uma conta?{" "}
                             <a
                                 href="/auth/login"
                                 className="font-semibold text-primary hover:text-primary-hover hover:underline transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-surface rounded-sm"
