@@ -1,7 +1,12 @@
 import { z } from "zod";
 
 export const registerSchema = z.object({
-    name: z.string().min(1, "O nome é obrigatório."),
+    name: z.string()
+        .min(1, "O nome é obrigatório.")
+        .refine((value) => value.length >= 3, {
+            message: "O nome deve ter no mínimo 3 caracteres."
+        })
+        ,
     lastName: z.string().min(1, "O sobrenome é obrigatório."),
     phone: z
         .string()
