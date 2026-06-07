@@ -62,8 +62,7 @@ export function ResetPasswordPage() {
                                 Criar nova senha
                             </h1>
                             <p className="text-text-muted text-sm">
-                                Digite sua nova senha abaixo. Certifique-se de
-                                que ela tenha pelo menos 8 caracteres.
+                                Digite sua nova senha abaixo.
                             </p>
                         </div>
 
