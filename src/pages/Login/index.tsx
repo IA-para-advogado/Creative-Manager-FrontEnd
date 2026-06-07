@@ -53,15 +53,25 @@ export function LoginPage() {
                                 {...register("email")}
                             />
 
-                            <Input
-                                type="password"
-                                id="password"
-                                label="Senha"
-                                placeholder="********"
-                                icon={Lock}
-                                error={errors.password?.message}
-                                {...register("password")}
-                            />
+                            <div>
+                                <Input
+                                    type="password"
+                                    id="password"
+                                    label="Senha"
+                                    placeholder="********"
+                                    icon={Lock}
+                                    error={errors.password?.message}
+                                    {...register("password")}
+                                />
+                                <div className="flex justify-end mt-1.5">
+                                    <a
+                                        href="#forgotpassword"
+                                        className="text-sm font-medium text-primary hover:text-primary-hover hover:underline transition-colors focus:outline-none rounded-sm"
+                                    >
+                                        Esqueceu a senha?
+                                    </a>
+                                </div>
+                            </div>
                         </div>
 
                         <button
@@ -81,6 +91,16 @@ export function LoginPage() {
                                 </div>
                             )}
                         </button>
+
+                        <p className="mt-6 text-center text-sm text-text-muted">
+                            Ainda não tem uma conta?{" "}
+                            <a
+                                href="#signup"
+                                className="font-semibold text-primary hover:text-primary-hover hover:underline transition-colors focus:outline-none rounded-sm"
+                            >
+                                Cadastre-se
+                            </a>
+                        </p>
                     </form>
                 </div>
             </div>
