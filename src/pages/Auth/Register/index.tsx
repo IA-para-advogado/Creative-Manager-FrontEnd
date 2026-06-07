@@ -2,12 +2,12 @@ import { Mail, Lock, User, Phone, UserPlus } from "lucide-react";
 import { TypeAnimation } from "react-type-animation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Input } from "../../components/common/Input";
+import { Input } from "../../../components/common/Input";
 import {
     registerSchema,
     type RegisterFormData,
-} from "../../types/RegisterSchema";
-import { Spinner } from "../../components/common/Spinner";
+} from "../../../types/RegisterSchema";
+import { Spinner } from "../../../components/common/Spinner";
 
 export function RegisterPage() {
     const {
