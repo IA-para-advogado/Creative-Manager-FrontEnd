@@ -139,7 +139,7 @@ export function RegisterPage() {
                         </button>
 
                         <p className="mt-4 text-center text-sm text-text-muted">
-                            Já possui uma conta?
+                            Já possui uma conta? {" "}
                             <a
                                 href="/auth/login"
                                 className="font-semibold text-primary hover:text-primary-hover hover:underline transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-surface rounded-sm"
