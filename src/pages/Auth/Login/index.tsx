@@ -2,9 +2,12 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Mail, Lock, LogIn } from "lucide-react";
 import { TypeAnimation } from "react-type-animation";
-import { Input } from "../../components/common/Input";
-import { loginSchema, type LoginFormData } from "../../types/LoginSchema";
-import { Spinner } from "../../components/common/Spinner";
+import { Input } from "../../../components/common/Input";
+import {
+    loginSchema,
+    type LoginFormData,
+} from "../../../types/Auth/LoginSchema";
+import { Spinner } from "../../../components/common/Spinner";
 
 export function LoginPage() {
     const {
@@ -72,7 +75,7 @@ export function LoginPage() {
                                 />
                                 <div className="flex justify-end mt-1.5">
                                     <a
-                                        href="#forgotpassword"
+                                        href="/auth/forgotpassword"
                                         className="text-sm font-medium text-primary hover:text-primary-hover hover:underline transition-colors focus:outline-none rounded-sm"
                                     >
                                         Esqueceu a senha?
