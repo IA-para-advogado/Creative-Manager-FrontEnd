@@ -55,7 +55,7 @@ export function LoginPage() {
                             message: "E-mail ou senha inválidos.",
                         });
                     } else if (message.includes("confirmado")) {
-                        alert("email nao confirmado.");
+                        toast.warning("Confirme seu email para concluir seu cadastro.");
                         navigate("/auth/emailConfirm");
                     }
                 } else if (status === 500) {
