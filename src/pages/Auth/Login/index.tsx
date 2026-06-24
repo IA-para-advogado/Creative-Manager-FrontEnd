@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Mail, Lock, LogIn } from "lucide-react";
@@ -8,18 +9,66 @@ import {
     type LoginFormData,
 } from "../../../types/Auth/LoginSchema";
 import { Spinner } from "../../../components/common/Spinner";
+import { api } from "../../../api/axios";
+import { toast } from "sonner";
 
 export function LoginPage() {
     const {
         register,
+        setError,
         handleSubmit,
         formState: { errors, isSubmitting },
     } = useForm<LoginFormData>({ resolver: zodResolver(loginSchema) });
 
-    async function handleLogin(data: LoginFormData) {
-        await new Promise((resolve) => setTimeout(resolve, 3000));
+    const navigate = useNavigate();
 
-        console.log(data);
+    async function handleLogin(data: LoginFormData) {
+        try {
+            const payload: LoginFormData = {
+                email: data.email,
+                password: data.password,
+            };
+            const response = await api.post("/auth/sign-in", payload);
+            const { user, access_token } = response.data;
+
+            localStorage.setItem("@CM:access_token", access_token);
+            localStorage.setItem("@CM:user", JSON.stringify(user));
+
+            api.defaults.headers.common["Authorization"] =
+                `Bearer ${access_token}`;
+
+            toast.success("Login efetuado com sucesso!");
+
+            navigate("/home");
+        } catch (error: any) {
+            if (error.response) {
+                const status = error.response.status;
+                const message = error.response.data.error;
+
+                if (status === 401) {
+                    if (message.includes("inválidos")) {
+                        setError("email", {
+                            message: "E-mail ou senha inválidos.",
+                        });
+
+                        setError("password", {
+                            message: "E-mail ou senha inválidos.",
+                        });
+                    } else if (message.includes("confirmado")) {
+                        toast.warning("Confirme seu email para concluir seu cadastro.");
+                        navigate("/auth/emailConfirm");
+                    }
+                } else if (status === 500) {
+                    toast.error(
+                        "Erro interno no servidor. Tente novamente mais tarde.",
+                    );
+                }
+            } else {
+                toast.error(
+                    "Erro interno no servidor. Tente novamente mais tarde.",
+                );
+            }
+        }
     }
 
     return (
