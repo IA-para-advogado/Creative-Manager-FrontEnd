@@ -10,6 +10,7 @@ import {
 } from "../../../types/Auth/LoginSchema";
 import { Spinner } from "../../../components/common/Spinner";
 import { api } from "../../../api/axios";
+import { toast } from "sonner";
 
 export function LoginPage() {
     const {
@@ -35,28 +36,37 @@ export function LoginPage() {
 
             api.defaults.headers.common["Authorization"] =
                 `Bearer ${access_token}`;
+
+            toast.success("Login efetuado com sucesso!");
+
             navigate("/home");
         } catch (error: any) {
             if (error.response) {
                 const status = error.response.status;
                 const message = error.response.data.error;
+
                 if (status === 401) {
                     if (message.includes("inválidos")) {
                         setError("email", {
                             message: "E-mail ou senha inválidos.",
                         });
+
                         setError("password", {
                             message: "E-mail ou senha inválidos.",
                         });
                     } else if (message.includes("confirmado")) {
-                        alert("email nao confirmado.")
-                        navigate("/auth/emailConfirm")
+                        alert("email nao confirmado.");
+                        navigate("/auth/emailConfirm");
                     }
                 } else if (status === 500) {
-                    alert(
+                    toast.error(
                         "Erro interno no servidor. Tente novamente mais tarde.",
                     );
                 }
+            } else {
+                toast.error(
+                    "Erro interno no servidor. Tente novamente mais tarde.",
+                );
             }
         }
     }
