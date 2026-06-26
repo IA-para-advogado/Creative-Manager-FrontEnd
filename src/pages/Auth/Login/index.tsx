@@ -12,6 +12,7 @@ import { Spinner } from "../../../components/common/Spinner";
 import { api } from "../../../api/axios";
 import { toast } from "sonner";
 
+
 export function LoginPage() {
     const {
         register,
@@ -56,7 +57,7 @@ export function LoginPage() {
                         });
                     } else if (message.includes("confirmado")) {
                         toast.warning("Confirme seu email para concluir seu cadastro.");
-                        navigate("/auth/emailConfirm");
+                        navigate("/auth/emailConfirm", {state: {email: data.email}});
                     }
                 } else if (status === 500) {
                     toast.error(
@@ -119,6 +120,7 @@ export function LoginPage() {
                                     label="Senha"
                                     placeholder="********"
                                     icon={Lock}
+                                    showPasswordToggle
                                     error={errors.password?.message}
                                     {...register("password")}
                                 />

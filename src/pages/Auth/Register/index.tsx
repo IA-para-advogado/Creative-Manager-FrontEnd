@@ -1,3 +1,5 @@
+import { useNavigate } from 'react-router-dom';
+
 import { Mail, Lock, User, Phone, UserPlus } from "lucide-react";
 import { TypeAnimation } from "react-type-animation";
 import { useForm } from "react-hook-form";
@@ -8,19 +10,74 @@ import {
     type RegisterFormData,
 } from "../../../types/Auth/RegisterSchema";
 import { Spinner } from "../../../components/common/Spinner";
+import { api } from "../../../api/axios";
+import { toast } from "sonner";
 
 export function RegisterPage() {
     const {
         register,
+        setError,
         handleSubmit,
         formState: { errors, isSubmitting },
     } = useForm<RegisterFormData>({
         resolver: zodResolver(registerSchema),
     });
 
+    const navigate = useNavigate();
+
     async function handleRegister(data: RegisterFormData) {
-        console.log(data);
-        await new Promise((resolve) => setTimeout(resolve, 2000));
+        try {
+            const payload = {
+                name: `${data.name} ${data.lastName}`,
+                email: data.email,
+                phone: data.phone,
+                password: data.password,
+                confirmPassword: data.password,
+            };
+
+            const response = await api.post("/auth/sign-up", payload);
+
+            console.log(response.data);
+
+            toast.success(
+                "Conta criada com sucesso! Verifique sua caixa de entrada.",
+            );
+
+            navigate("/auth/emailConfirm", {state: {email: data.email}})
+        } catch (error: any) {
+            if (error.response) {
+                const status = error.response.status;
+                const message =
+                    error.response.data.error || error.response.data.message;
+                    
+                if (status === 409 || status === 400) {
+                    if (
+                        message.includes("já existe") ||
+                        message.includes("already") ||
+                        message.includes("uso")
+                    ) {
+                        setError("email", {
+                            message: "Este e-mail já está cadastrado.",
+                        });
+                    } else {
+                        toast.error(
+                            message ||
+                                "Erro ao processar seu cadastro. Verifique os dados.",
+                        );
+                    }
+                } else if (status === 500) {
+                    toast.error(
+                        "Erro interno no servidor. Tente novamente mais tarde.",
+                    );
+                } else {
+                    toast.error("Ocorreu um erro inesperado. Tente novamente.");
+                }
+            } else {
+                toast.error(
+                    "Não foi possível conectar ao servidor. Tente novamente mais tarde.",
+                );
+            }
+        }
     }
 
     const formatPhone = (value: string) => {
@@ -114,6 +171,7 @@ export function RegisterPage() {
                             label="Senha"
                             placeholder="********"
                             icon={Lock}
+                            showPasswordToggle
                             error={errors.password?.message}
                             {...register("password")}
                         />
