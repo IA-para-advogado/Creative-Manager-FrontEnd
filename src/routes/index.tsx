@@ -4,6 +4,7 @@ import { LoginPage } from "../pages/Auth/Login";
 import { RegisterPage } from "../pages/Auth/Register";
 import { ForgotPasswordPage } from "../pages/Auth/ForgotPassword";
 import { ResetPasswordPage } from "../pages/Auth/ResetPassword";
+import { EmailConfirmPage } from "../pages/Auth/ConfirmEmail";
 /* import { Layout } from "../components/Layout"*/
 
 export const router = createBrowserRouter([
@@ -33,6 +34,10 @@ export const router = createBrowserRouter([
                     {
                         path: "resetpassword",
                         element: <ResetPasswordPage />
+                    },
+                    {
+                        path: "emailconfirm",
+                        element: <EmailConfirmPage />
                     }
                 ],
             },

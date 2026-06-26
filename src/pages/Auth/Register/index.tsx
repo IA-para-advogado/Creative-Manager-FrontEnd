@@ -43,7 +43,7 @@ export function RegisterPage() {
                 "Conta criada com sucesso! Verifique sua caixa de entrada.",
             );
 
-            navigate("/auth/emailConfirm")
+            navigate("/auth/emailConfirm", {state: {email: data.email}})
         } catch (error: any) {
             if (error.response) {
                 const status = error.response.status;
