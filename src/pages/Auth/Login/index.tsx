@@ -119,6 +119,7 @@ export function LoginPage() {
                                     label="Senha"
                                     placeholder="********"
                                     icon={Lock}
+                                    showPasswordToggle
                                     error={errors.password?.message}
                                     {...register("password")}
                                 />
