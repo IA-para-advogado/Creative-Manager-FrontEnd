@@ -40,7 +40,8 @@ export function LoginPage() {
 
             toast.success("Login efetuado com sucesso!");
 
-            navigate("/home");
+            // Corrigido: a rota logada é "/", não "/home" (que não existe no router).
+            navigate("/");
         } catch (error: any) {
             if (error.response) {
                 const status = error.response.status;
@@ -57,7 +58,8 @@ export function LoginPage() {
                         });
                     } else if (message.includes("confirmado")) {
                         toast.warning("Confirme seu email para concluir seu cadastro.");
-                        navigate("/auth/emailConfirm", {state: {email: data.email}});
+                        // Corrigido: a rota é "emailconfirm" (minúsculo).
+                        navigate("/auth/emailconfirm", {state: {email: data.email}});
                     }
                 } else if (status === 500) {
                     toast.error(

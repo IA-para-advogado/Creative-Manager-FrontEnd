@@ -15,3 +15,32 @@
     --color-success: #10b981;
     --color-danger: #ef4444;
 }
+
+/* Impressão do relatório: esconde todo o app e mostra só a folha (.print-area).
+   É o que o botão "Exportar PDF" (window.print) usa na tela de Relatório. */
+@media print {
+    body * {
+        visibility: hidden;
+    }
+    .print-area,
+    .print-area * {
+        visibility: visible;
+    }
+    .print-area {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        max-width: none;
+        border: none;
+    }
+    @page {
+        margin: 14mm;
+    }
+}
+
+/* Garante que as cores (roxo, verde, vermelho) saiam no PDF. */
+.print-area {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+}
