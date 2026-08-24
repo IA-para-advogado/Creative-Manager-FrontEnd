@@ -30,7 +30,7 @@ export const router = createBrowserRouter([
         ),
         children: [
             { path: "/", element: <DashboardPage /> },
-            // Próximas telas (Nova análise, Relatório...) entram aqui.
+            // Próximas telas (Histórico, Configurações...) entram aqui.
         ],
     },
 ]);

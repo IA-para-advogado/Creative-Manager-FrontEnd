@@ -74,8 +74,27 @@ export function ConjuntosTable({ rows, detected, showCampaign }: ConjuntosTableP
         }
     }
 
-    const SortIcon = ({ active }: { active: boolean }) =>
-        !active ? null : sortDesc ? <ChevronDown size={14} /> : <ChevronUp size={14} />;
+    // O ícone ocupa um slot de largura fixa mesmo na coluna inativa. Sem isso, a
+    // seta muda de coluna a cada clique, a largura das duas colunas muda junto e
+    // toda a tabela desliza na horizontal — o clique seguinte, no mesmo ponto da
+    // tela, cairia numa coluna vizinha.
+    //
+    // A seta da coluna ativa é roxa; a que aparece no hover é apagada. São dois
+    // sinais distintos: "esta coluna ordena" e "esta coluna é clicável".
+    const SortIcon = ({ active }: { active: boolean }) => (
+        <span
+            aria-hidden="true"
+            className={`inline-flex w-3.5 shrink-0 justify-center ${
+                active ? "text-primary" : "opacity-0 group-hover:opacity-25"
+            }`}
+        >
+            {active && !sortDesc ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+        </span>
+    );
+
+    // Coluna que ordena fica destacada; as demais permanecem discretas.
+    const thClass = (key: SortKey): string =>
+        sortKey === key ? "bg-primary/10 text-text" : "text-text-muted hover:text-text";
 
     return (
         <div className="overflow-x-auto rounded-2xl border border-border">
@@ -85,7 +104,7 @@ export function ConjuntosTable({ rows, detected, showCampaign }: ConjuntosTableP
                         {/* 1ª coluna fixa: nome do conjunto */}
                         <th
                             onClick={() => toggleSort("adset")}
-                            className="sticky left-0 z-10 cursor-pointer bg-surface px-4 py-3 text-left font-medium text-text-muted"
+                            className="group sticky left-0 z-10 cursor-pointer bg-surface px-4 py-3 text-left font-medium text-text-muted hover:text-text"
                         >
                             <span className="flex items-center gap-1">
                                 Conjunto <SortIcon active={sortKey === "adset"} />
@@ -98,7 +117,7 @@ export function ConjuntosTable({ rows, detected, showCampaign }: ConjuntosTableP
                             <th
                                 key={key}
                                 onClick={() => toggleSort(key)}
-                                className="cursor-pointer whitespace-nowrap px-4 py-3 text-right font-medium text-text-muted hover:text-text"
+                                className={`group cursor-pointer whitespace-nowrap px-4 py-3 text-right font-medium transition-colors ${thClass(key)}`}
                             >
                                 <span className="flex items-center justify-end gap-1">
                                     {METRIC_LABELS[key]} <SortIcon active={sortKey === key} />

@@ -16,7 +16,9 @@ interface ReportViewProps {
     totals: Totals; // agregados do recorte
     detected: MetricKey[];
     period: { start: string | null; end: string | null };
-    recorteLabel: string; // "Todas as campanhas" ou o nome da campanha filtrada
+    recorteLabel: string; // "Todas as campanhas", o nome da campanha ou "N campanhas selecionadas"
+    recorteCampaigns?: string[]; // nomes do recorte parcial; vazio quando é "todas"
+    hasAdsetData: boolean; // false em export de nível campanha
 }
 
 // Métricas exibidas nas TABELAS do relatório (enxutas para caber na página).
@@ -52,7 +54,15 @@ function byDimension(rows: AnalysisRow[], key: "campaign" | "adset"): DimRow[] {
         .sort((a, b) => (b.totals.spend ?? 0) - (a.totals.spend ?? 0));
 }
 
-export function ReportView({ rows, totals, detected, period, recorteLabel }: ReportViewProps) {
+export function ReportView({
+    rows,
+    totals,
+    detected,
+    period,
+    recorteLabel,
+    recorteCampaigns = [],
+    hasAdsetData,
+}: ReportViewProps) {
     // Quais blocos entram no relatório.
     const [sections, setSections] = useState({
         resumo: true,
@@ -83,7 +93,12 @@ export function ReportView({ rows, totals, detected, period, recorteLabel }: Rep
             {/* Controles: ficam FORA da .print-area, então não saem no PDF. */}
             <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-border bg-surface p-4">
                 <div className="flex flex-wrap gap-4 text-sm">
-                    {(["resumo", "funil", "campanhas", "conjuntos"] as const).map((key) => (
+                    {/* "Conjuntos" só entra na lista quando o arquivo tem esse
+                        nível — em export de campanha a seção sairia vazia. */}
+                    {(hasAdsetData
+                        ? (["resumo", "funil", "campanhas", "conjuntos"] as const)
+                        : (["resumo", "funil", "campanhas"] as const)
+                    ).map((key) => (
                         <label key={key} className="flex cursor-pointer items-center gap-2 text-text-muted">
                             <input
                                 type="checkbox"
@@ -124,7 +139,7 @@ export function ReportView({ rows, totals, detected, period, recorteLabel }: Rep
                 </div>
 
                 {/* Contexto da análise */}
-                <div className="mb-8 grid grid-cols-2 gap-4 text-sm sm:grid-cols-3">
+                <div className="mb-8 grid grid-cols-2 gap-4 text-sm">
                     <div>
                         <div className="text-xs uppercase tracking-wide text-zinc-400">Recorte</div>
                         <div className="font-medium">{recorteLabel}</div>
@@ -135,11 +150,25 @@ export function ReportView({ rows, totals, detected, period, recorteLabel }: Rep
                             {fmtDate(period.start)} – {fmtDate(period.end)}
                         </div>
                     </div>
-                    <div>
-                        <div className="text-xs uppercase tracking-wide text-zinc-400">Conjuntos</div>
-                        <div className="font-medium">{conjuntos.length}</div>
-                    </div>
                 </div>
+
+                {/* Recorte parcial: nomeia as campanhas incluídas, para o PDF
+                    não deixar dúvida sobre o que entrou nos totais. */}
+                {recorteCampaigns.length > 1 && (
+                    <div className="mb-8 rounded-lg border border-zinc-200 bg-zinc-50 p-4">
+                        <div className="mb-2 text-xs uppercase tracking-wide text-zinc-400">
+                            Campanhas incluídas neste relatório
+                        </div>
+                        <ol className="grid gap-x-6 gap-y-1 text-sm sm:grid-cols-2">
+                            {recorteCampaigns.map((name, i) => (
+                                <li key={name} className="flex gap-2">
+                                    <span className="text-zinc-400">{i + 1}.</span>
+                                    <span>{name}</span>
+                                </li>
+                            ))}
+                        </ol>
+                    </div>
+                )}
 
                 {/* Resumo (KPIs) */}
                 {sections.resumo && (
@@ -177,7 +206,7 @@ export function ReportView({ rows, totals, detected, period, recorteLabel }: Rep
                 )}
 
                 {/* Conjuntos */}
-                {sections.conjuntos && (
+                {hasAdsetData && sections.conjuntos && (
                     <section>
                         <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-zinc-500">Conjuntos</h3>
                         <ReportTable rows={conjuntos} cols={tableCols} labelHeader="Conjunto" showCampaign />

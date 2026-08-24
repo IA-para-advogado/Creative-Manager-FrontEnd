@@ -49,7 +49,7 @@ export const METRIC_LABELS: Record<MetricKey, string> = {
 const COLUMN_ALIASES: Record<string, string[]> = {
     campaign: ["nome da campanha", "campaign name"],
     adset: ["nome do conjunto de anúncios", "ad set name"],
-    spend: ["valor usado (brl)", "valor gasto", "amount spent (brl)", "spend"],
+    spend: ["valor usado (brl)", "valor gasto (brl)", "valor gasto", "amount spent (brl)", "spend"],
     impressions: ["impressões", "impressions"],
     reach: ["alcance", "reach"],
     linkClicks: ["cliques no link", "link clicks", "cliques"],
@@ -62,6 +62,70 @@ const COLUMN_ALIASES: Record<string, string[]> = {
     reportStart: ["início dos relatórios", "reporting starts"],
     reportEnd: ["encerramento dos relatórios", "reporting ends"],
 };
+
+// ----------------------------------------------------------------------------
+// Validação do arquivo enviado
+// ----------------------------------------------------------------------------
+
+// Teto de tamanho: o CSV é lido inteiro na memória do navegador, então um
+// arquivo grande demais trava a aba antes de qualquer mensagem aparecer.
+export const MAX_FILE_BYTES = 20 * 1024 * 1024; // 20 MB
+
+interface ColumnSpec {
+    key: string;
+    label: string; // como a coluna se chama no export do Meta
+}
+
+// Colunas de identificação: "preenchida" aqui significa texto não vazio. Nas
+// demais o critério é ter número válido — um traço ("–") não conta como valor.
+const TEXT_COLUMNS = new Set<string>(["campaign", "adset"]);
+
+// Um requisito do arquivo. Com mais de uma chave em `keys`, vale como
+// alternativa: basta UMA delas vir preenchida.
+interface RequiredSpec {
+    keys: string[];
+    label: string;
+}
+
+// Sem estes quatro, o dashboard não tem o que mostrar: a identificação agrupa
+// as linhas, e gasto + impressões + cliques sustentam Gasto, Impressões,
+// Cliques, CTR, CPC, CPM e o funil. A ausência de qualquer um barra o arquivo
+// — é o que separa um export do Meta de uma planilha qualquer.
+//
+// A identificação aceita campanha OU conjunto porque o Meta muda a coluna
+// conforme o nível do relatório: no de nível campanha vem "Nome da campanha";
+// no de nível conjunto, só "Nome do conjunto de anúncios".
+export const REQUIRED_COLUMNS: RequiredSpec[] = [
+    { keys: ["campaign", "adset"], label: "Nome da campanha ou do conjunto de anúncios" },
+    { keys: ["spend"], label: "Valor gasto (BRL)" },
+    { keys: ["impressions"], label: "Impressões" },
+    { keys: ["linkClicks"], label: "Cliques no link" },
+];
+
+// Estas enriquecem a análise, mas não impedem o uso do arquivo: avisamos o que
+// ficou de fora em vez de rejeitar. `unlocks` explica ao usuário o que se perde.
+// Campanha e conjunto aparecem aqui também: uma delas satisfaz o requisito de
+// identificação acima, e a que faltar vira aviso.
+export const OPTIONAL_COLUMNS: Array<ColumnSpec & { unlocks: string }> = [
+    { key: "campaign", label: "Nome da campanha", unlocks: "os totais por campanha" },
+    { key: "adset", label: "Nome do conjunto de anúncios", unlocks: "os totais por conjunto" },
+    { key: "costPerResult", label: "Custo por resultado", unlocks: "Resultados e o fim do funil" },
+    { key: "roas", label: "ROAS de resultados", unlocks: "Receita e ROAS" },
+    { key: "conversations", label: "Conversas por mensagem iniciadas", unlocks: "Conversas por mensagem" },
+];
+
+// Erro de validação (arquivo legível, mas inadequado). Diferente de um erro de
+// leitura: a tela usa essa distinção para explicar o que exatamente faltou em
+// vez de cair na mensagem genérica de "não foi possível ler".
+export class CsvValidationError extends Error {
+    readonly detail: string;
+
+    constructor(message: string, detail = "") {
+        super(message);
+        this.name = "CsvValidationError";
+        this.detail = detail;
+    }
+}
 
 // Uma linha já normalizada (um conjunto de anúncios). Métrica ausente = null.
 export interface AnalysisRow {
@@ -113,6 +177,12 @@ export interface AnalysisResult {
     detected: MetricKey[]; // métricas que este arquivo sustenta (nível do arquivo)
     totals: Totals; // agregados de TODAS as linhas
     byCampaign: DimensionBreakdown[]; // quebra por campanha (todas as linhas)
+    // Colunas opcionais ausentes: o arquivo é válido, mas a tela avisa o que
+    // deixou de ser calculado por causa delas.
+    missingOptional: Array<{ label: string; unlocks: string }>;
+    // Falso em export de nível campanha, onde a coluna de conjunto não vem ou
+    // vem vazia. A tela usa isso para esconder o que só faz sentido por conjunto.
+    hasAdsetData: boolean;
 }
 
 // Converte célula em número. Vazio/whitespace → null (nunca 0). Aceita vírgula
@@ -206,7 +276,10 @@ export function groupRows(rows: AnalysisRow[], key: "campaign" | "adset"): Dimen
 // Constrói a análise a partir da matriz crua do CSV.
 export function buildAnalysis(matrix: string[][]): AnalysisResult {
     if (matrix.length < 2) {
-        throw new Error("O arquivo não tem linhas de dados suficientes.");
+        throw new CsvValidationError(
+            "O arquivo não tem linhas de dados.",
+            "Ele parece conter só o cabeçalho. Exporte o relatório novamente com o período preenchido.",
+        );
     }
 
     // Cabeçalho: remove o BOM da primeira célula, se houver.
@@ -227,8 +300,39 @@ export function buildAnalysis(matrix: string[][]): AnalysisResult {
     const cell = (row: string[], key: string): string | undefined =>
         indexOf[key] === undefined ? undefined : row[indexOf[key]];
 
-    // Normaliza cada linha de dados.
     const dataRows = matrix.slice(1).filter((r) => r.some((c) => c.trim() !== ""));
+
+    // Uma coluna presente porém vazia é tão inútil quanto uma ausente: o
+    // cabeçalho existe, mas nenhuma linha traz valor. Acontece em export de
+    // nível campanha, onde "Nome do conjunto de anúncios" vem em branco em
+    // todas as linhas. Por isso checamos o conteúdo, não só o cabeçalho.
+    const hasValues = (key: string): boolean => {
+        if (indexOf[key] === undefined) return false;
+        return dataRows.some((r) =>
+            TEXT_COLUMNS.has(key)
+                ? (cell(r, key) ?? "").trim() !== ""
+                : toNum(cell(r, key)) !== null,
+        );
+    };
+
+    // Barra o arquivo que não sustenta um dashboard. Sem esta checagem, uma
+    // planilha qualquer passa e gera todos os KPIs em "–", sem que o usuário
+    // perceba que subiu o arquivo errado.
+    // `some`: num requisito com alternativas, uma coluna preenchida já basta.
+    const missingRequired = REQUIRED_COLUMNS.filter((c) => !c.keys.some(hasValues));
+    if (missingRequired.length > 0) {
+        const faltando = missingRequired.map((c) => `"${c.label}"`).join(", ");
+        throw new CsvValidationError(
+            `Faltam métricas obrigatórias: ${faltando}.`,
+            `O relatório precisa trazer ${REQUIRED_COLUMNS.map((c) => `"${c.label}"`).join(", ")} com valores preenchidos.`,
+        );
+    }
+
+    const missingOptional = OPTIONAL_COLUMNS.filter((c) => !hasValues(c.key)).map(
+        ({ label, unlocks }) => ({ label, unlocks }),
+    );
+
+    // Normaliza cada linha de dados.
     const rows: AnalysisRow[] = dataRows.map((r) => {
         const spend = toNum(cell(r, "spend"));
         const costPerResult = toNum(cell(r, "costPerResult"));
@@ -274,7 +378,15 @@ export function buildAnalysis(matrix: string[][]): AnalysisResult {
         end: ends.length ? ends.sort()[ends.length - 1] : null,
     };
 
-    return { rows, period, detected, totals, byCampaign };
+    return {
+        rows,
+        period,
+        detected,
+        totals,
+        byCampaign,
+        missingOptional,
+        hasAdsetData: hasValues("adset"),
+    };
 }
 
 // --- Formatação (pt-BR) --- (retornam null quando o valor é null)

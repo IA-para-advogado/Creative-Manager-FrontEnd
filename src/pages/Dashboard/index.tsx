@@ -14,11 +14,11 @@ import {
     ShoppingCart,
     MessageSquare,
     BarChart3,
-    Filter,
     LayoutGrid,
     Table,
     GitCompare,
     FileText,
+    AlertTriangle,
 } from "lucide-react";
 import {
     BarChart,
@@ -34,6 +34,7 @@ import { KpiCard } from "../../components/common/KpiCard";
 import { ConjuntosTable } from "../../components/common/ConjuntosTable";
 import { CampaignCompareTable } from "../../components/common/CampaignCompareTable";
 import { ReportView } from "../../components/common/ReportView";
+import { CampaignFilter } from "../../components/common/CampaignFilter";
 import {
     parseCsvFile,
     buildAnalysis,
@@ -44,6 +45,8 @@ import {
     fmtPct,
     fmtDecimal,
     METRIC_LABELS,
+    MAX_FILE_BYTES,
+    CsvValidationError,
     type AnalysisResult,
 } from "../../lib/meta";
 
@@ -56,11 +59,16 @@ const COLOR_BORDER = "#27272a";
 const COLOR_SURFACE = "#18181b";
 const COLOR_TEXT = "#fafafa";
 
-const ALL = "__all__"; // valor do filtro "Todas as campanhas"
 
 type Tab = "overview" | "conjuntos" | "compare" | "report";
 
 const truncate = (s: string, n: number): string => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
+
+// Tamanho de arquivo legível (usado só nas mensagens de erro do upload).
+const fmtBytes = (bytes: number): string =>
+    bytes >= 1024 * 1024
+        ? `${(bytes / (1024 * 1024)).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} MB`
+        : `${Math.max(Math.round(bytes / 1024), 1)} KB`;
 
 // "2026-06-28" → "28/06/2026" (sem criar Date, evita fuso).
 const fmtDate = (iso: string | null): string => {
@@ -72,28 +80,51 @@ const fmtDate = (iso: string | null): string => {
 export function DashboardPage() {
     const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
-    const [campaignFilter, setCampaignFilter] = useState<string>(ALL);
+    // Recorte atual: conjunto de campanhas escolhidas. Começa com todas quando
+    // um arquivo é carregado, e o usuário pode reduzir para quantas quiser.
+    const [selected, setSelected] = useState<Set<string>>(new Set());
     const [tab, setTab] = useState<Tab>("overview");
     const inputRef = useRef<HTMLInputElement>(null);
 
     async function handleFile(file: File) {
+        // Checagens baratas primeiro: nome e tamanho, antes de ler o conteúdo.
         if (!file.name.toLowerCase().endsWith(".csv")) {
             toast.error("Envie um arquivo .csv exportado do Meta Ads.");
             return;
         }
+        if (file.size === 0) {
+            toast.error("Este arquivo está vazio.");
+            return;
+        }
+        if (file.size > MAX_FILE_BYTES) {
+            toast.error(`Arquivo grande demais: ${fmtBytes(file.size)}.`, {
+                description: `O limite é ${fmtBytes(MAX_FILE_BYTES)}. Exporte um período menor.`,
+            });
+            return;
+        }
+
         setLoading(true);
         try {
             const matrix = await parseCsvFile(file);
             const result = buildAnalysis(matrix);
             setAnalysis(result);
-            setCampaignFilter(ALL); // novo arquivo → volta pro filtro "Todas"
+            // Novo arquivo → recorte volta a ser todas as campanhas dele.
+            setSelected(new Set(result.byCampaign.map((c) => c.name)));
             setTab("overview");
             toast.success(
-                `Análise gerada: ${result.rows.length} conjuntos, ${result.byCampaign.length} campanhas.`,
+                `Análise gerada: ${result.byCampaign.length} ${
+                    result.byCampaign.length === 1 ? "campanha" : "campanhas"
+                }.`,
             );
         } catch (error) {
             console.error("[Dashboard] erro ao processar CSV", error);
-            toast.error("Não foi possível ler este CSV. Confira o arquivo e tente de novo.");
+            // Arquivo inadequado: dizemos o que faltou. Falha de leitura de
+            // verdade (binário, encoding quebrado) cai na mensagem genérica.
+            if (error instanceof CsvValidationError) {
+                toast.error(error.message, { description: error.detail || undefined });
+            } else {
+                toast.error("Não foi possível ler este CSV. Confira o arquivo e tente de novo.");
+            }
         } finally {
             setLoading(false);
         }
@@ -109,18 +140,32 @@ export function DashboardPage() {
     // a aba Conjuntos. A aba Comparar tem a própria seleção múltipla.
     const view = useMemo(() => {
         if (!analysis) return null;
-        const isAll = campaignFilter === ALL;
+        const isAll = selected.size === analysis.byCampaign.length;
         const rows = isAll
             ? analysis.rows
-            : analysis.rows.filter((r) => r.campaign === campaignFilter);
+            : analysis.rows.filter((r) => selected.has(r.campaign));
+        // Com uma única campanha no recorte, o gráfico desce um nível e mostra
+        // os conjuntos dela. Sem dados de conjunto no arquivo, fica por campanha.
+        const byAdset = selected.size === 1 && analysis.hasAdsetData;
         return {
             isAll,
             rows,
+            byAdset,
             totals: summarizeRows(rows),
-            chart: groupRows(rows, isAll ? "campaign" : "adset").slice(0, 8),
+            chart: groupRows(rows, byAdset ? "adset" : "campaign").slice(0, 8),
             campaignCount: new Set(rows.map((r) => r.campaign)).size,
         };
-    }, [analysis, campaignFilter]);
+    }, [analysis, selected]);
+
+    // Como o recorte aparece no cabeçalho e no relatório impresso.
+    const recorteLabel =
+        selected.size === 0
+            ? "Nenhuma campanha selecionada"
+            : !view || view.isAll
+              ? "Todas as campanhas"
+              : selected.size === 1
+                ? [...selected][0]
+                : `${selected.size} campanhas selecionadas`;
 
     const TABS: Array<{ id: Tab; label: string; icon: typeof LayoutGrid }> = [
         { id: "overview", label: "Visão geral", icon: LayoutGrid },
@@ -174,33 +219,27 @@ export function DashboardPage() {
                 <div className="space-y-6">
                     {/* Cabeçalho + filtro por campanha (oculto na aba Comparar) */}
                     <div className="flex flex-wrap items-center justify-between gap-4">
-                        <div>
-                            <h2 className="text-xl font-bold">Visão geral</h2>
+                        {/* `min-w-0 flex-1` deixa o título encolher em vez de
+                            empurrar os controles para a linha de baixo — nome de
+                            campanha pode ser bem mais longo que "Todas as campanhas". */}
+                        <div className="min-w-0 flex-1">
+                            <h2 className="truncate text-xl font-bold" title={recorteLabel}>
+                                {recorteLabel}
+                            </h2>
                             <p className="text-sm text-text-muted">
                                 Período {fmtDate(analysis.period.start)} – {fmtDate(analysis.period.end)} ·{" "}
-                                {view.campaignCount} {view.campaignCount === 1 ? "campanha" : "campanhas"} ·{" "}
-                                {view.rows.length} conjuntos
+                                {view.campaignCount} de {analysis.byCampaign.length}{" "}
+                                {analysis.byCampaign.length === 1 ? "campanha" : "campanhas"}
                             </p>
                         </div>
 
-                        <div className="flex items-center gap-3">
+                        <div className="flex shrink-0 items-center gap-3">
                             {tab !== "compare" && (
-                                <div className="flex items-center gap-2">
-                                    <Filter size={16} className="text-text-muted" />
-                                    <select
-                                        value={campaignFilter}
-                                        onChange={(e) => setCampaignFilter(e.target.value)}
-                                        style={{ colorScheme: "dark" }}
-                                        className="max-w-[220px] rounded-md border border-border bg-surface px-3 py-2 text-sm text-text outline-none focus:border-primary"
-                                    >
-                                        <option value={ALL}>Todas as campanhas</option>
-                                        {analysis.byCampaign.map((c) => (
-                                            <option key={c.name} value={c.name}>
-                                                {c.name}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
+                                <CampaignFilter
+                                    campaigns={analysis.byCampaign.map((c) => c.name)}
+                                    selected={selected}
+                                    onChange={setSelected}
+                                />
                             )}
 
                             <button
@@ -231,6 +270,20 @@ export function DashboardPage() {
                         ))}
                     </div>
 
+                    {/* Recorte vazio: sem campanha escolhida não há o que somar.
+                        Mostramos um aviso em vez de um dashboard todo em "–". */}
+                    {selected.size === 0 && tab !== "compare" ? (
+                        <div className="rounded-2xl border border-dashed border-border bg-surface p-10 text-center">
+                            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-warning/15">
+                                <AlertTriangle className="h-6 w-6 text-warning" />
+                            </div>
+                            <h3 className="mb-1 font-semibold">Nenhuma campanha selecionada</h3>
+                            <p className="text-sm text-text-muted">
+                                Escolha ao menos uma campanha no filtro acima para ver os indicadores.
+                            </p>
+                        </div>
+                    ) : (
+                    <>
                     {/* ---------- Aba: Visão geral ---------- */}
                     {tab === "overview" && (
                         <div className="space-y-6">
@@ -249,6 +302,26 @@ export function DashboardPage() {
                                         </span>
                                     ))}
                                 </div>
+
+                                {/* Colunas opcionais que não vieram (ausentes do cabeçalho ou
+                                    presentes mas vazias): o arquivo é válido, mas o usuário
+                                    precisa saber o que deixou de ser calculado. */}
+                                {analysis.missingOptional.length > 0 && (
+                                    <div className="mt-4 border-t border-border pt-3">
+                                        <div className="mb-2 flex items-center gap-2 text-xs font-medium text-text-muted">
+                                            <AlertTriangle size={14} className="text-warning" />
+                                            Colunas ausentes ou sem dados neste arquivo
+                                        </div>
+                                        <ul className="space-y-1 text-xs text-text-muted">
+                                            {analysis.missingOptional.map((c) => (
+                                                <li key={c.label}>
+                                                    <span className="text-text">{c.label}</span> — sem ela,
+                                                    não é possível calcular {c.unlocks}.
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Cartões de KPI (recalculados para o recorte; ausente = "–") */}
@@ -292,7 +365,7 @@ export function DashboardPage() {
                             <div className="rounded-2xl border border-border bg-surface p-5">
                                 <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold">
                                     <BarChart3 size={16} className="text-primary" />
-                                    {view.isAll ? "Gasto por campanha" : "Gasto por conjunto"}
+                                    {view.byAdset ? "Gasto por conjunto" : "Gasto por campanha"}
                                 </h3>
                                 <ResponsiveContainer width="100%" height={Math.max(220, view.chart.length * 42)}>
                                     <BarChart
@@ -330,9 +403,30 @@ export function DashboardPage() {
                     )}
 
                     {/* ---------- Aba: Conjuntos ---------- */}
-                    {tab === "conjuntos" && (
-                        <ConjuntosTable rows={view.rows} detected={analysis.detected} showCampaign={view.isAll} />
-                    )}
+                    {tab === "conjuntos" &&
+                        (analysis.hasAdsetData ? (
+                            <ConjuntosTable
+                                rows={view.rows}
+                                detected={analysis.detected}
+                                showCampaign={selected.size > 1}
+                            />
+                        ) : (
+                            // Export de nível campanha: não há o que detalhar aqui.
+                            <div className="rounded-2xl border border-dashed border-border bg-surface p-10 text-center">
+                                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-warning/15">
+                                    <AlertTriangle className="h-6 w-6 text-warning" />
+                                </div>
+                                <h3 className="mb-2 font-semibold">
+                                    Este arquivo não tem dados de conjunto
+                                </h3>
+                                <p className="mx-auto max-w-md text-sm text-text-muted">
+                                    O relatório foi exportado a nível de campanha, então não há
+                                    conjuntos de anúncios para detalhar ou comparar. Para ver esta
+                                    aba, exporte novamente do Meta Ads escolhendo o detalhamento
+                                    por conjunto de anúncios.
+                                </p>
+                            </div>
+                        ))}
 
                     {/* ---------- Aba: Comparar campanhas ---------- */}
                     {tab === "compare" && <CampaignCompareTable analysis={analysis} />}
@@ -344,8 +438,21 @@ export function DashboardPage() {
                             totals={view.totals}
                             detected={analysis.detected}
                             period={analysis.period}
-                            recorteLabel={view.isAll ? "Todas as campanhas" : campaignFilter}
+                            recorteLabel={recorteLabel}
+                            hasAdsetData={analysis.hasAdsetData}
+                            // Lista nominal só quando o recorte é parcial: no
+                            // relatório impresso o leitor precisa saber quais
+                            // campanhas entraram na conta.
+                            recorteCampaigns={
+                                view.isAll
+                                    ? []
+                                    : analysis.byCampaign
+                                          .map((c) => c.name)
+                                          .filter((n) => selected.has(n))
+                            }
                         />
+                    )}
+                    </>
                     )}
                 </div>
             )}

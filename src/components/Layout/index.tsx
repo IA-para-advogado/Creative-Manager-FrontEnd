@@ -3,8 +3,6 @@ import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
     LayoutDashboard,
-    Upload,
-    Sparkles,
     History,
     Settings,
     LogOut,
@@ -25,8 +23,6 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
     { label: "Visão geral",   to: "/",              icon: LayoutDashboard, ready: true  },
-    { label: "Nova análise",  to: "/analises/nova", icon: Upload,          ready: false },
-    { label: "Insights IA",   to: "/insights",      icon: Sparkles,        ready: false },
     { label: "Histórico",     to: "/historico",     icon: History,         ready: false },
     { label: "Configurações", to: "/configuracoes", icon: Settings,        ready: false },
 ];
