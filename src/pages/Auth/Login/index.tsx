@@ -10,7 +10,7 @@ import {
     type LoginFormData,
 } from "../../../types/Auth/LoginSchema";
 import { Spinner } from "../../../components/common/Spinner";
-import { api } from "../../../api/axios";
+import { useAuth } from "../../../hooks/useAuth";
 import { toast } from "sonner";
 
 
@@ -24,6 +24,7 @@ export function LoginPage() {
 
     const navigate = useNavigate();
     const location = useLocation();
+    const { signIn } = useAuth();
 
     useEffect(() => {
         const queryParams = new URLSearchParams(location.search);
@@ -36,22 +37,9 @@ export function LoginPage() {
 
     async function handleLogin(data: LoginFormData) {
         try {
-            const payload: LoginFormData = {
-                email: data.email,
-                password: data.password,
-            };
-            const response = await api.post("/auth/sign-in", payload);
-            const { user, access_token } = response.data;
-
-            localStorage.setItem("@CM:access_token", access_token);
-            localStorage.setItem("@CM:user", JSON.stringify(user));
-
-            api.defaults.headers.common["Authorization"] =
-                `Bearer ${access_token}`;
+            await signIn(data.email, data.password);
 
             toast.success("Login efetuado com sucesso!");
-
-            // Corrigido: a rota logada é "/", não "/home" (que não existe no router).
             navigate("/");
         } catch (error: any) {
             if (error.response) {

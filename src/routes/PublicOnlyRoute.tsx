@@ -3,7 +3,7 @@ import { Navigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { Spinner } from "../components/common/Spinner";
 
-export function RequireAuth({ children }: { children: ReactNode }) {
+export function PublicOnlyRoute({ children }: { children: ReactNode }) {
     const { isAuthenticated, isLoading } = useAuth();
 
     if (isLoading) {
@@ -14,8 +14,8 @@ export function RequireAuth({ children }: { children: ReactNode }) {
         );
     }
 
-    if (!isAuthenticated) {
-        return <Navigate to="/auth/login" replace />;
+    if (isAuthenticated) {
+        return <Navigate to="/" replace />;
     }
 
     return <>{children}</>;

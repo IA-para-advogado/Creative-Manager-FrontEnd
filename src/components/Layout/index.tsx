@@ -10,10 +10,8 @@ import {
     X,
     type LucideIcon,
 } from "lucide-react";
-import { api } from "../../api/axios";
+import { useAuth } from "../../hooks/useAuth";
 
-// Seções da área logada. `ready` marca o que já tem tela pronta; o restante
-// aparece como "em breve" e é habilitado conforme cada tela vai sendo construída.
 interface NavItem {
     label: string;
     to: string;
@@ -22,26 +20,19 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-    { label: "Visão geral",   to: "/",              icon: LayoutDashboard, ready: true  },
-    { label: "Histórico",     to: "/historico",     icon: History,         ready: false },
-    { label: "Configurações", to: "/configuracoes", icon: Settings,        ready: true },
+    { label: "Visão geral", to: "/", icon: LayoutDashboard, ready: true },
+    { label: "Histórico", to: "/historico", icon: History, ready: true },
+    { label: "Configurações", to: "/configuracoes", icon: Settings, ready: true },
 ];
-
-// Formato mínimo do usuário salvo no login (objeto de usuário do Supabase).
-interface StoredUser {
-    email?: string;
-    user_metadata?: { name?: string };
-}
 
 export function Layout() {
     const navigate = useNavigate();
     const { pathname } = useLocation();
+    const { user, signOut } = useAuth();
 
     // Controla o drawer no mobile; a partir de md a sidebar é fixa.
     const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
 
-    // Usuário gravado no login (@CM:user), com parse protegido.
-    const user = readStoredUser();
     const displayName = user?.user_metadata?.name ?? user?.email ?? "Usuário";
     const email = user?.email ?? "";
     const initials = getInitials(displayName);
@@ -49,15 +40,8 @@ export function Layout() {
     // Título da topbar = seção ativa (casa a rota atual com o item do menu).
     const currentSection = NAV_ITEMS.find((item) => item.to === pathname) ?? NAV_ITEMS[0];
 
-    function handleLogout() {
-        // Encerra a sessão no back, mas sem travar o logout se a chamada falhar.
-        api.post("/auth/sign-out").catch(() => undefined);
-
-        // Limpa o estado local (mesmas chaves gravadas no login) e o header do axios.
-        localStorage.removeItem("@CM:access_token");
-        localStorage.removeItem("@CM:user");
-        delete api.defaults.headers.common["Authorization"];
-
+    async function handleLogout() {
+        await signOut();
         toast.success("Sessão encerrada.");
         navigate("/auth/login");
     }
@@ -74,9 +58,8 @@ export function Layout() {
 
             {/* Sidebar: drawer no mobile, fixa a partir de md */}
             <aside
-                className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-border bg-surface transition-transform duration-300 md:static md:translate-x-0 ${
-                    sidebarOpen ? "translate-x-0" : "-translate-x-full"
-                }`}
+                className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-border bg-surface transition-transform duration-300 md:static md:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"
+                    }`}
             >
                 {/* Marca — mesmo monograma "CM" das telas de Auth, para coerência visual */}
                 <div className="flex h-16 items-center gap-3 border-b border-border px-5">
@@ -106,14 +89,12 @@ export function Layout() {
                             <NavLink
                                 key={item.to}
                                 to={item.to}
-                                // `end` evita que a rota "/" fique ativa em todas as outras.
                                 end={item.to === "/"}
                                 onClick={() => setSidebarOpen(false)}
                                 className={({ isActive }) =>
-                                    `flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                                        isActive
-                                            ? "bg-primary/10 text-primary"
-                                            : "text-text-muted hover:bg-background hover:text-text"
+                                    `flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${isActive
+                                        ? "bg-primary/10 text-primary"
+                                        : "text-text-muted hover:bg-background hover:text-text"
                                     }`
                                 }
                             >
@@ -136,8 +117,8 @@ export function Layout() {
                     )}
                 </nav>
 
-                <div className="border-t border-border p-3 text-xs text-text-muted">
-                    v1.0.0
+                <div className="border-t border-border p-3 text-xs text-text-muted text-center">
+                    Copyright © 2026
                 </div>
             </aside>
 
@@ -157,20 +138,31 @@ export function Layout() {
 
                     {/* Usuário + logout */}
                     <div className="ml-auto flex items-center gap-3">
-                        <div className="hidden text-right sm:block">
-                            <p className="text-sm font-medium leading-tight">{displayName}</p>
-                            {email && (
-                                <p className="text-xs leading-tight text-text-muted">{email}</p>
-                            )}
-                        </div>
+                        {/* Perfil clicável redirecionando para configurações */}
+                        <button
+                            onClick={() => navigate("/configuracoes")}
+                            className="flex items-center gap-3 p-1.5 rounded-lg border border-transparent hover:border-border hover:bg-background/60 transition-all cursor-pointer text-left group"
+                            title="Ir para configurações do perfil"
+                        >
+                            <div className="hidden text-right sm:block">
+                                <p className="text-sm font-medium leading-tight group-hover:text-primary transition-colors">
+                                    {displayName}
+                                </p>
+                                {email && (
+                                    <p className="text-xs leading-tight text-text-muted">
+                                        {email}
+                                    </p>
+                                )}
+                            </div>
 
-                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/15 text-sm font-semibold text-primary">
-                            {initials}
-                        </div>
+                            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/15 text-sm font-semibold text-primary transition-all">
+                                {initials}
+                            </div>
+                        </button>
 
                         <button
                             onClick={handleLogout}
-                            className="flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm font-medium text-text-muted transition-colors hover:bg-background hover:text-text"
+                            className="flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm font-medium text-text-muted transition-colors hover:bg-background hover:text-text cursor-pointer"
                         >
                             <LogOut size={16} />
                             <span className="hidden sm:inline">Sair</span>
@@ -178,23 +170,13 @@ export function Layout() {
                     </div>
                 </header>
 
-                {/* Conteúdo das telas filhas (renderizadas pelo router) */}
+                {/* Conteúdo das telas filhas */}
                 <main className="flex-1 p-4 md:p-6">
                     <Outlet />
                 </main>
             </div>
         </div>
     );
-}
-
-// Lê e valida o usuário salvo no localStorage; retorna null se ausente/corrompido.
-function readStoredUser(): StoredUser | null {
-    try {
-        const raw = localStorage.getItem("@CM:user");
-        return raw ? (JSON.parse(raw) as StoredUser) : null;
-    } catch {
-        return null;
-    }
 }
 
 // Gera as iniciais (até 2 letras) a partir do nome exibido.
