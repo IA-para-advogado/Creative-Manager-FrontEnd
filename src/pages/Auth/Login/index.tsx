@@ -1,4 +1,5 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Mail, Lock, LogIn } from "lucide-react";
@@ -22,6 +23,16 @@ export function LoginPage() {
     } = useForm<LoginFormData>({ resolver: zodResolver(loginSchema) });
 
     const navigate = useNavigate();
+    const location = useLocation();
+
+    useEffect(() => {
+        const queryParams = new URLSearchParams(location.search);
+        if (queryParams.get("confirmed") === "true") {
+            toast.success("E-mail confirmado com sucesso! Faça seu login.");
+            // Remove the query parameter without refreshing the page
+            window.history.replaceState({}, document.title, "/auth/login");
+        }
+    }, [location.search]);
 
     async function handleLogin(data: LoginFormData) {
         try {
@@ -45,7 +56,7 @@ export function LoginPage() {
         } catch (error: any) {
             if (error.response) {
                 const status = error.response.status;
-                const message = error.response.data.error;
+                const message = error.response.data?.message || error.response.data?.error || "";
 
                 if (status === 401) {
                     if (message.includes("inválidos")) {
