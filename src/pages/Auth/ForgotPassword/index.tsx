@@ -3,6 +3,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Input } from "../../../components/common/Input";
 import { Spinner } from "../../../components/common/Spinner";
+import { api } from "../../../api/axios";
+import { toast } from "sonner";
 import {
     forgotPasswordSchema,
     type ForgotPasswordFormData,
@@ -18,8 +20,25 @@ export function ForgotPasswordPage() {
     });
 
     async function handleRecoverPassword(data: ForgotPasswordFormData) {
-        console.log("E-mail para recuperação:", data.email);
-        await new Promise((resolve) => setTimeout(resolve, 2000));
+        try {
+            await api.post("/auth/reset-password-request", { email: data.email });
+        } catch (error: any) {
+            if (error.response) {
+                const status = error.response.status;
+                const message = error.response.data?.message || error.response.data?.error;
+                if (status === 400 || status === 404) {
+                    toast.error(message || "E-mail inválido ou não encontrado.");
+                } else if (status === 500 || status === 429) {
+                    toast.error(message || "Erro interno no servidor. Tente novamente mais tarde.");
+                } else {
+                    toast.error(message || "Ocorreu um erro inesperado. Tente novamente.");
+                }
+            } else {
+                toast.error("Não foi possível conectar ao servidor. Tente novamente mais tarde.");
+            }
+            // Interrompe o submit para evitar que a tela de sucesso apareça indevidamente
+            throw error;
+        }
     }
 
     return (

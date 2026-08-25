@@ -55,7 +55,8 @@ export function RegisterPage() {
                     if (
                         message.includes("já existe") ||
                         message.includes("already") ||
-                        message.includes("uso")
+                        message.includes("uso") ||
+                        message.includes("cadastrado")
                     ) {
                         setError("email", {
                             message: "Este e-mail já está cadastrado.",
@@ -66,12 +67,12 @@ export function RegisterPage() {
                                 "Erro ao processar seu cadastro. Verifique os dados.",
                         );
                     }
-                } else if (status === 500) {
+                } else if (status === 500 || status === 429) {
                     toast.error(
-                        "Erro interno no servidor. Tente novamente mais tarde.",
+                        message || "Erro interno no servidor. Tente novamente mais tarde.",
                     );
                 } else {
-                    toast.error("Ocorreu um erro inesperado. Tente novamente.");
+                    toast.error(message || "Ocorreu um erro inesperado. Tente novamente.");
                 }
             } else {
                 toast.error(
