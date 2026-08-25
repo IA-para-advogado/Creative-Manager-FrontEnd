@@ -1,8 +1,11 @@
+import { useEffect, useState } from "react";
 import { Lock, ArrowLeft, CheckCircle, Save } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Input } from "../../../components/common/Input";
 import { Spinner } from "../../../components/common/Spinner";
+import { api } from "../../../api/axios";
+import { toast } from "sonner";
 import {
     resetPasswordSchema,
     type ResetPasswordFormData,
@@ -17,9 +20,49 @@ export function ResetPasswordPage() {
         resolver: zodResolver(resetPasswordSchema),
     });
 
+    const [tokens, setTokens] = useState<{access_token: string; refresh_token: string} | null>(null);
+
+    useEffect(() => {
+        const hash = window.location.hash;
+        if (hash) {
+            const params = new URLSearchParams(hash.substring(1));
+            const access_token = params.get("access_token");
+            const refresh_token = params.get("refresh_token");
+            if (access_token && refresh_token) {
+                setTokens({ access_token, refresh_token });
+            }
+        }
+    }, []);
+
     async function handleResetPassword(data: ResetPasswordFormData) {
-        console.log("Nova senha validada:", data);
-        await new Promise((resolve) => setTimeout(resolve, 2000));
+        if (!tokens) {
+            toast.error("Link de recuperação inválido ou expirado.");
+            throw new Error("Missing tokens");
+        }
+
+        try {
+            await api.post("/auth/reset-password", {
+                password: data.password,
+                access_token: tokens.access_token,
+                refresh_token: tokens.refresh_token,
+            });
+        } catch (error: any) {
+            if (error.response) {
+                const status = error.response.status;
+                const message = error.response.data?.message || error.response.data?.error;
+                
+                if (status === 400) {
+                    toast.error(message || "Dados inválidos para redefinição de senha.");
+                } else if (status === 500) {
+                    toast.error("Erro interno no servidor. Tente novamente mais tarde.");
+                } else {
+                    toast.error("Ocorreu um erro inesperado. Tente novamente.");
+                }
+            } else {
+                toast.error("Não foi possível conectar ao servidor. Tente novamente mais tarde.");
+            }
+            throw error;
+        }
     }
 
     return (
@@ -76,6 +119,7 @@ export function ResetPasswordPage() {
                                 label="Nova Senha"
                                 placeholder="Mínimo de 8 caracteres"
                                 icon={Lock}
+                                showPasswordToggle
                                 error={errors.password?.message}
                                 {...register("password")}
                             />
@@ -86,6 +130,7 @@ export function ResetPasswordPage() {
                                 label="Confirmar Senha"
                                 placeholder="Repita a nova senha"
                                 icon={Lock}
+                                showPasswordToggle
                                 error={errors.confirmPassword?.message}
                                 {...register("confirmPassword")}
                             />
