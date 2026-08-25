@@ -19,6 +19,7 @@ import {
     GitCompare,
     FileText,
     AlertTriangle,
+    Save,
 } from "lucide-react";
 import {
     BarChart,
@@ -29,12 +30,14 @@ import {
     Tooltip,
     ResponsiveContainer,
 } from "recharts";
+import { useCsv, type Tab } from "../../contexts/CsvContext";
 import { Spinner } from "../../components/common/Spinner";
 import { KpiCard } from "../../components/common/KpiCard";
 import { ConjuntosTable } from "../../components/common/ConjuntosTable";
 import { CampaignCompareTable } from "../../components/common/CampaignCompareTable";
 import { ReportView } from "../../components/common/ReportView";
 import { CampaignFilter } from "../../components/common/CampaignFilter";
+import { saveToHistory } from "../../lib/history";
 import {
     parseCsvFile,
     buildAnalysis,
@@ -59,9 +62,6 @@ const COLOR_BORDER = "#27272a";
 const COLOR_SURFACE = "#18181b";
 const COLOR_TEXT = "#fafafa";
 
-
-type Tab = "overview" | "conjuntos" | "compare" | "report";
-
 const truncate = (s: string, n: number): string => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
 
 // Tamanho de arquivo legível (usado só nas mensagens de erro do upload).
@@ -78,13 +78,22 @@ const fmtDate = (iso: string | null): string => {
 };
 
 export function DashboardPage() {
-    const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
+    const { analysis, setAnalysis, selected, setSelected, tab, setTab } = useCsv();
     const [loading, setLoading] = useState<boolean>(false);
     // Recorte atual: conjunto de campanhas escolhidas. Começa com todas quando
     // um arquivo é carregado, e o usuário pode reduzir para quantas quiser.
-    const [selected, setSelected] = useState<Set<string>>(new Set());
-    const [tab, setTab] = useState<Tab>("overview");
     const inputRef = useRef<HTMLInputElement>(null);
+
+    function handleSave() {
+        if (!analysis) return;
+        const title = `Análise (${fmtDate(analysis.period.start)} a ${fmtDate(analysis.period.end)})`;
+        const success = saveToHistory(title, analysis);
+        if (success) {
+            toast.success("Salvo no histórico com sucesso!");
+        } else {
+            toast.error("Erro ao salvar.", { description: "Pode ser que o arquivo seja muito grande e o navegador não tenha espaço suficiente." });
+        }
+    }
 
     async function handleFile(file: File) {
         // Checagens baratas primeiro: nome e tamanho, antes de ler o conteúdo.
@@ -241,6 +250,14 @@ export function DashboardPage() {
                                     onChange={setSelected}
                                 />
                             )}
+
+                            <button
+                                onClick={handleSave}
+                                className="flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary/10"
+                            >
+                                <Save size={16} />
+                                Salvar
+                            </button>
 
                             <button
                                 onClick={() => inputRef.current?.click()}

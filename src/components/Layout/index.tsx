@@ -21,7 +21,7 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
     { label: "Visão geral", to: "/", icon: LayoutDashboard, ready: true },
-    { label: "Histórico", to: "/historico", icon: History, ready: false },
+    { label: "Histórico", to: "/historico", icon: History, ready: true },
     { label: "Configurações", to: "/configuracoes", icon: Settings, ready: true },
 ];
 

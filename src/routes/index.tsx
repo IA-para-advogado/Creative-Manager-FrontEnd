@@ -3,6 +3,7 @@ import { Layout } from "../components/Layout";
 import { RequireAuth } from "./RequireAuth";
 import { PublicOnlyRoute } from "./PublicOnlyRoute";
 import { DashboardPage } from "../pages/Dashboard";
+import { HistoryPage } from "../pages/History";
 import { SettingsPage } from "../pages/Settings";
 import { LoginPage } from "../pages/Auth/Login";
 import { RegisterPage } from "../pages/Auth/Register";
@@ -43,6 +44,7 @@ export const router = createBrowserRouter([
         ),
         children: [
             { path: "/", element: <DashboardPage /> },
+            { path: "historico", element: <HistoryPage /> },
             { path: "configuracoes", element: <SettingsPage /> },
         ],
     },
