@@ -1,0 +1,62 @@
+@import "tailwindcss";
+
+@theme {
+    --color-primary: #7c3aed;
+    --color-primary-hover: #6d28d9;
+
+    --color-background: #09090b;
+    --color-surface: #18181b;
+
+    --color-border: #27272a;
+
+    --color-text: #fafafa;
+    --color-text-muted: #a1a1aa;
+
+    --color-success: #10b981;
+    --color-warning: #f59e0b;
+    --color-danger: #ef4444;
+}
+
+/* Impressão do relatório: esconde todo o app e mostra só a folha (.print-area).
+   É o que o botão "Exportar PDF" (window.print) usa na tela de Relatório. */
+@media print {
+    body * {
+        visibility: hidden;
+    }
+    .print-area,
+    .print-area * {
+        visibility: visible;
+    }
+    .print-area {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        max-width: none;
+        border: none;
+    }
+    @page {
+        margin: 14mm;
+    }
+}
+
+/* Garante que as cores (roxo, verde, vermelho) saiam no PDF. */
+.print-area {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+}
+
+@keyframes fade-in {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-fade-in {
+    animation: fade-in 0.3s ease-out forwards;
+}
