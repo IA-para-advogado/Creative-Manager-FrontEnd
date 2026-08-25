@@ -8,6 +8,7 @@ import { RegisterPage } from "../pages/Auth/Register";
 import { ForgotPasswordPage } from "../pages/Auth/ForgotPassword";
 import { ResetPasswordPage } from "../pages/Auth/ResetPassword";
 import { EmailConfirmPage } from "../pages/Auth/ConfirmEmail";
+import { ConfirmedPage } from "../pages/Auth/Confirmed";
 
 export const router = createBrowserRouter([
     // Área pública (autenticação) — sem o shell logado.
@@ -19,6 +20,7 @@ export const router = createBrowserRouter([
             { path: "forgotpassword", element: <ForgotPasswordPage /> },
             { path: "resetpassword", element: <ResetPasswordPage /> },
             { path: "emailconfirm", element: <EmailConfirmPage /> },
+            { path: "confirmed", element: <ConfirmedPage /> },
         ],
     },
 
